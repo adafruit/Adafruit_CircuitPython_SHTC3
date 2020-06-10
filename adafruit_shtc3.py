@@ -36,6 +36,7 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_SHTC3.git"
 
 # Common imports remove if unused or pylint will complain
 from time import sleep as delay_seconds
+from time import monotonic
 import adafruit_bus_device.i2c_device as i2c_device
 
 from adafruit_register.i2c_struct import UnaryStruct, ROUnaryStruct, Struct
@@ -67,7 +68,7 @@ class SHTC3:
   def __init__(self, i2c_bus, address = _SHTC3_DEFAULT_ADDR):
     self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
-    self._buffer = bytearray(3)
+    self._buffer = bytearray(6)
     self.reset()
     self.sleep = False
     if (self._chip_id & 0x083F != _SHTC3_CHIP_ID):
@@ -91,7 +92,6 @@ class SHTC3:
 
     return unpack_from(">H", self._buffer)[0]
 
-
   def reset(self):
     self._write_command(_SHTC3_SOFTRESET)
     delay_seconds(0.001)
@@ -111,76 +111,65 @@ class SHTC3:
 
 # lowPowerMode(bool readmode) { _lpMode = readmode
 
+  @property
+  def humidity(self):
+    """Current relative humidity in % rH"""
+  # sensors_event_t *humidity,
+  #                               sensors_event_t *temp) {
+    t = monotonic()
+    print("reading hum/temp")
+    readbuffer = bytearray(6)
 
-# readID(void) {
-#   uint8_t data[3]
+    self.sleep = False
+    read_bytes = []
 
-#   readCommand(SHTC3_READID, data, 3)
+    # self._write_command(_SHTC3_LOWPOW_MEAS_TFIRST)
+    if False: #lowPower
+      self._write_command(_SHTC3_LOWPOW_MEAS_TFIRST)
+      delay_seconds(0.001)
+    else:
+      self._write_command(_SHTC3_NORMAL_MEAS_TFIRST)
+      delay_seconds(0.013)
 
-#   uint16_t id = data[0]
-#   id <<= 8
-#   id |= data[1]
+  #   while (!i2c_dev->read(readbuffer, sizeof(readbuffer))) {
+  #     delay(1)
+    while True:
+      with self.i2c_device as i2c:
+          print("reading")
+          i2c.readinto(self._buffer)
+      print("buf:", [hex(i) for i in self._buffer])
+      read_bytes = unpack_from(">hbh", self._buffer)
+      print("unpacked:", read_bytes)
+      if read_bytes[0] != 0 and read_bytes[1] != 0 and read_bytes[2] != 0:
+        print ("not all zeros, breaking")
+        break
+      print ("all zeros, continuing")
 
-#   return id
-#
+    # if (self._buffer[2] != crc8(self._buffer, 2) or
+    #     self._buffer[5] != crc8(self._buffer + 3, 2)):
+    #   print("NOT CHECKING")
 
+    stemp = read_bytes[0]
+    stemp = ((4375 * stemp) >> 14) - 4500
+    temperature = stemp / 100.0
+    print("temp:", temperature, "stemp:", stemp)
 
+    shum = read_bytes[2]
+    shum = (625 * shum) >> 12
+    humidity = shum / 100.0
 
+    self.sleep = True
 
+    print("shum:", shum, "humidity:", humidity)
+    return (temperature, humidity)
+  #   delay_seconds(true)
 
-# /**************************************************************************/
-# /*!
-#     @brief  Gets the humidity sensor and temperature values as sensor events
-#     @param  humidity Sensor event object that will be populated with humidity
-#    data
-#     @param  temp Sensor event object that will be populated with temp data
-#     @returns true if the event data was read successfully
-# */
-# /**************************************************************************/
-# sensors_event_t *humidity,
-#                               sensors_event_t *temp) {
-#   uint32_t t = millis()
-
-#   uint8_t readbuffer[6]
-
-#   delay_seconds(false)
-#   if (_lpMode) {
-#     // low power
-#     writeCommand(SHTC3_LOWPOW_MEAS_TFIRST)
-#     delay(1)
-#   else {
-#     writeCommand(SHTC3_NORMAL_MEAS_TFIRST)
-#     delay(13)
-#  
-
-#   while (!i2c_dev->read(readbuffer, sizeof(readbuffer))) {
-#     delay(1)
-#  
-
-#   if (readbuffer[2] != crc8(readbuffer, 2) ||
-#       readbuffer[5] != crc8(readbuffer + 3, 2))
-#     return false
-
-#   int32_t stemp = (int32_t)(((uint32_t)readbuffer[0] << 8) | readbuffer[1])
-#   // simplified (65536 instead of 65535) integer version of:
-#   // temp = (stemp * 175.0f) / 65535.0f - 45.0f
-#   stemp = ((4375 * stemp) >> 14) - 4500
-#   _temperature = (float)stemp / 100.0f
-
-#   uint32_t shum = ((uint32_t)readbuffer[3] << 8) | readbuffer[4]
-#   // simplified (65536 instead of 65535) integer version of:
-#   // humidity = (shum * 100.0f) / 65535.0f
-#   shum = (625 * shum) >> 12
-#   _humidity = (float)shum / 100.0f
-
-#   delay_seconds(true)
-
-#   // use helpers to fill in the events
-#   if (temp)
-#     fillTempEvent(temp, t)
-#   if (humidity)
-#     fillHumidityEvent(humidity, t)
-#   return true
+  #   // use helpers to fill in the events
+  #   if (temp)
+  #     fillTempEvent(temp, t)
+  #   if (humidity)
+  #     fillHumidityEvent(humidity, t)
+  #   return true
 #
 
 

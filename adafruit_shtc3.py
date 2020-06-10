@@ -67,12 +67,10 @@ class SHTC3:
   def __init__(self, i2c_bus, address = _SHTC3_DEFAULT_ADDR):
     self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
-    self._buffer = bytearray(2)
+    self._buffer = bytearray(3)
     self.reset()
     self.sleep = False
-    read_id = self._chip_id
-    print("got chip_id:", format(read_id, "#010x"))
-    if (read_id & 0x083F != _SHTC3_CHIP_ID):
+    if (self._chip_id & 0x083F != _SHTC3_CHIP_ID):
       raise RuntimeError("Failed to find an ICM20X sensor - check your wiring!")
 
 
@@ -81,21 +79,17 @@ class SHTC3:
     self._buffer[1] = command & 0xFF
 
     with self.i2c_device as i2c:
-      i2c.write(self._buffer)
+      i2c.write(self._buffer, start=0, end=0)
 
   @property
   def _chip_id(self): #   readCommand(SHTC3_READID, data, 3);
-    out_buf = bytearray(3)
-
-    self._write_command(_SHTC3_READID)
+    self._buffer[0] = _SHTC3_READID >> 8
+    self._buffer[1] = _SHTC3_READID & 0xFF
 
     with self.i2c_device as i2c:
-        i2c.readinto(out_buf)
-        # i2c.write_then_readinto(self._buffer, self._buffer, out_end=1, in_start=1)
-    print("buf in:", out_buf)
-    print("vuf a:", [hex(i) for i in list(out_buf)])
+        i2c.write_then_readinto(self._buffer, self._buffer, out_start=0, out_end=2, in_start=0)
 
-    return unpack_from(">H", out_buf)[0]
+    return unpack_from(">H", self._buffer)[0]
 
 
   def reset(self):

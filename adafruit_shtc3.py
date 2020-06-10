@@ -34,14 +34,14 @@ Implementation Notes
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_SHTC3.git"
 
-# Common imports; remove if unused or pylint will complain
-from time import sleep
+# Common imports remove if unused or pylint will complain
+from time import sleep as delay_seconds
 import adafruit_bus_device.i2c_device as i2c_device
 
 from adafruit_register.i2c_struct import UnaryStruct, ROUnaryStruct, Struct
 from adafruit_register.i2c_bit import RWBit, ROBit
 from adafruit_register.i2c_bits import RWBits
-
+from struct import unpack_from
 #include "Arduino.h"
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_Sensor.h>
@@ -61,106 +61,78 @@ _SHTC3_READID = 0xEFC8    # Read Out of ID Register
 _SHTC3_SOFTRESET = 0x805D # Soft Reset
 _SHTC3_SLEEP = 0xB098     # Enter sleep mode
 _SHTC3_WAKEUP = 0x3517    # Wakeup mode
+_SHTC3_CHIP_ID = 0x807
 
 class SHTC3:
   def __init__(self, i2c_bus, address = _SHTC3_DEFAULT_ADDR):
     self.i2c_device = i2c_device.I2CDevice(i2c_bus, address)
 
+    self._buffer = bytearray(2)
     self.reset()
-    #   reset();
-    self._sleep = False
+    self.sleep = False
+    read_id = self._chip_id
+    print("got chip_id:", format(read_id, "#010x"))
+    if (read_id & 0x083F != _SHTC3_CHIP_ID):
+      raise RuntimeError("Failed to find an ICM20X sensor - check your wiring!")
 
-    if ((readID() & 0x083F) != 0x807) {
-      return false;
-    }
-
-#  * Internal function to perform and I2C write.
-#  *
-#  * @param cmd   The 16-bit command ID to send.
-#  */
-  def _write_command(self, command):
-    self._buffer.clear() #??
-    self._buffer = bytearray(command)
-    # MSBYTE first
-      self._buffer[0] = command >> 8
-      self._buffer[1] = command & 0xFF
-
-    with obj.i2c_device as i2c:
-      i2c.write(self._buffer)
-
-
-# /**
-#  * Internal function to perform an I2C read.
-#  *
-#  * @param cmd   The 16-bit command ID to send.
-#  */
-# bool Adafruit_SHTC3::readCommand(uint16_t command, uint8_t *buffer,
-#                                  uint8_t num_bytes) {
 
   def _write_command(self, command):
-    self._buffer.clear() #??
-    self._buffer = bytearray(command)
-    # MSBYTE first
     self._buffer[0] = command >> 8
     self._buffer[1] = command & 0xFF
 
-    with obj.i2c_device as i2c:
-        i2c.write_then_readinto(self.buffer, self.buffer, out_end=1, in_start=1)
+    with self.i2c_device as i2c:
+      i2c.write(self._buffer)
+
+  @property
+  def _chip_id(self): #   readCommand(SHTC3_READID, data, 3);
+    out_buf = bytearray(3)
+
+    self._write_command(_SHTC3_READID)
+
+    with self.i2c_device as i2c:
+        i2c.readinto(out_buf)
+        # i2c.write_then_readinto(self._buffer, self._buffer, out_end=1, in_start=1)
+    print("buf in:", out_buf)
+    print("vuf a:", [hex(i) for i in list(out_buf)])
+
+    return unpack_from(">H", out_buf)[0]
 
 
-#   cmd[0] = command >> 8;
-#   cmd[1] = command & 0xFF;
+  def reset(self):
+    self._write_command(_SHTC3_SOFTRESET)
+    delay_seconds(0.001)
 
-#   return i2c_dev->write_then_read(cmd, 2, buffer, num_bytes);
-# }
+  @property
+  def sleep(self):
+    """Determines the sleep state of the sensor"""
+    return self._cached_sleep
+
+  @sleep.setter
+  def sleep(self, sleep_enabled):
+      if sleep_enabled:
+        self._write_command(_SHTC3_SLEEP)
+      else:
+        self._write_command(_SHTC3_WAKEUP)
+      delay_seconds(0.001)
+
+# lowPowerMode(bool readmode) { _lpMode = readmode
 
 
-# /**
-#  * @brief Brings the SHTC3 in or out of sleep mode
-#  *
-#  * @param sleepmode If true, go into sleep mode. Else, wakeup
-#  */
-# void Adafruit_SHTC3::sleep(bool sleepmode) {
-#   if (sleepmode) {
-#     writeCommand(SHTC3_SLEEP);
-#   } else {
-#     writeCommand(SHTC3_WAKEUP);
-#     delayMicroseconds(250);
-#   }
-# }
+# readID(void) {
+#   uint8_t data[3]
 
-# /**
-#  * @brief Tells the SHTC3 to read future data in low power (fast) or normal
-#  * (precise)
-#  *
-#  * @param readmode If true, use low power mode for reads
-#  */
-# void Adafruit_SHTC3::lowPowerMode(bool readmode) { _lpMode = readmode; }
+#   readCommand(SHTC3_READID, data, 3)
 
-# /**
-#  * Gets the ID register contents.
-#  *
-#  * @return The 16-bit ID register.
-#  */
-# uint16_t Adafruit_SHTC3::readID(void) {
-#   uint8_t data[3];
+#   uint16_t id = data[0]
+#   id <<= 8
+#   id |= data[1]
 
-#   readCommand(SHTC3_READID, data, 3);
+#   return id
+#
 
-#   uint16_t id = data[0];
-#   id <<= 8;
-#   id |= data[1];
 
-#   return id;
-# }
 
-# /**
-#  * Performs a reset of the sensor to put it into a known state.
-#  */
-# void Adafruit_SHTC3::reset(void) {
-#   writeCommand(SHTC3_SOFTRESET);
-#   delay(1);
-# }
+
 
 # /**************************************************************************/
 # /*!
@@ -171,51 +143,51 @@ class SHTC3:
 #     @returns true if the event data was read successfully
 # */
 # /**************************************************************************/
-# bool Adafruit_SHTC3::(sensors_event_t *humidity,
+# sensors_event_t *humidity,
 #                               sensors_event_t *temp) {
-#   uint32_t t = millis();
+#   uint32_t t = millis()
 
-#   uint8_t readbuffer[6];
+#   uint8_t readbuffer[6]
 
-#   sleep(false);
+#   delay_seconds(false)
 #   if (_lpMode) {
 #     // low power
-#     writeCommand(SHTC3_LOWPOW_MEAS_TFIRST);
-#     delay(1);
-#   } else {
-#     writeCommand(SHTC3_NORMAL_MEAS_TFIRST);
-#     delay(13);
-#   }
+#     writeCommand(SHTC3_LOWPOW_MEAS_TFIRST)
+#     delay(1)
+#   else {
+#     writeCommand(SHTC3_NORMAL_MEAS_TFIRST)
+#     delay(13)
+#  
 
 #   while (!i2c_dev->read(readbuffer, sizeof(readbuffer))) {
-#     delay(1);
-#   }
+#     delay(1)
+#  
 
 #   if (readbuffer[2] != crc8(readbuffer, 2) ||
 #       readbuffer[5] != crc8(readbuffer + 3, 2))
-#     return false;
+#     return false
 
-#   int32_t stemp = (int32_t)(((uint32_t)readbuffer[0] << 8) | readbuffer[1]);
+#   int32_t stemp = (int32_t)(((uint32_t)readbuffer[0] << 8) | readbuffer[1])
 #   // simplified (65536 instead of 65535) integer version of:
-#   // temp = (stemp * 175.0f) / 65535.0f - 45.0f;
-#   stemp = ((4375 * stemp) >> 14) - 4500;
-#   _temperature = (float)stemp / 100.0f;
+#   // temp = (stemp * 175.0f) / 65535.0f - 45.0f
+#   stemp = ((4375 * stemp) >> 14) - 4500
+#   _temperature = (float)stemp / 100.0f
 
-#   uint32_t shum = ((uint32_t)readbuffer[3] << 8) | readbuffer[4];
+#   uint32_t shum = ((uint32_t)readbuffer[3] << 8) | readbuffer[4]
 #   // simplified (65536 instead of 65535) integer version of:
-#   // humidity = (shum * 100.0f) / 65535.0f;
-#   shum = (625 * shum) >> 12;
-#   _humidity = (float)shum / 100.0f;
+#   // humidity = (shum * 100.0f) / 65535.0f
+#   shum = (625 * shum) >> 12
+#   _humidity = (float)shum / 100.0f
 
-#   sleep(true);
+#   delay_seconds(true)
 
 #   // use helpers to fill in the events
 #   if (temp)
-#     fillTempEvent(temp, t);
+#     fillTempEvent(temp, t)
 #   if (humidity)
-#     fillHumidityEvent(humidity, t);
-#   return true;
-# }
+#     fillHumidityEvent(humidity, t)
+#   return true
+#
 
 
 
@@ -240,15 +212,15 @@ class SHTC3:
 #    * Final XOR 0x00
 #    */
 
-#   const uint8_t POLYNOMIAL(0x31);
-#   uint8_t crc(0xFF);
+#   const uint8_t POLYNOMIAL(0x31)
+#   uint8_t crc(0xFF)
 
-#   for (int j = len; j; --j) {
-#     crc ^= *data++;
+#   for (int j = len j --j) {
+#     crc ^= *data++
 
-#     for (int i = 8; i; --i) {
-#       crc = (crc & 0x80) ? (crc << 1) ^ POLYNOMIAL : (crc << 1);
-#     }
-#   }
-#   return crc;
-# }
+#     for (int i = 8 i --i) {
+#       crc = (crc & 0x80) ? (crc << 1) ^ POLYNOMIAL : (crc << 1)
+#    
+#  
+#   return crc
+#

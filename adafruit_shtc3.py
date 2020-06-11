@@ -25,8 +25,8 @@ Implementation Notes
 
 
 
-# * Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-# * Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
+* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
 # imports
@@ -80,8 +80,9 @@ _SHTC3_CHIP_ID = 0x807
 class SHTC3:
     """
     A driver for the SHTC3 temperature and humidity sensor.
-    :param i2c_bus: The `busio.I2C` object to use. This is the only required parameter.
-    :param int address: (optional) The I2C address of the device.
+
+    :param ~busio.I2C i2c_bus: The `busio.I2C` object to use. This is the only required parameter.
+
     """
 
     def __init__(self, i2c_bus):
@@ -90,7 +91,7 @@ class SHTC3:
         self._buffer = bytearray(6)
         self.low_power = False
         self.reset()
-        self.sleep = False
+        self.sleeping = False
         if self._chip_id & 0x083F != _SHTC3_CHIP_ID:
             raise RuntimeError("Failed to find an ICM20X sensor - check your wiring!")
 
@@ -124,12 +125,12 @@ class SHTC3:
         time.sleep(0.001)
 
     @property
-    def sleep(self):
+    def sleeping(self):
         """Determines the sleep state of the sensor"""
         return self._cached_sleep
 
-    @sleep.setter
-    def sleep(self, sleep_enabled):
+    @sleeping.setter
+    def sleeping(self, sleep_enabled):
         if sleep_enabled:
             self._write_command(_SHTC3_SLEEP)
         else:
@@ -150,19 +151,19 @@ class SHTC3:
 
     @property
     def relative_humidity(self):
-        """Current relative humidity in % rH"""
+        """The current relative humidity in % rH"""
         return self.measurements[1]
 
     @property
     def temperature(self):
-        """Current temperature in degrees celcius"""
+        """The current temperature in degrees celcius"""
         return self.measurements[0]
 
     @property
     def measurements(self):
         """both `temperature` and `relative_humidity`, read simultaneously"""
 
-        self.sleep = False
+        self.sleeping = False
         temperature = None
         humidity = None
         # send correct command for the current power state
@@ -193,16 +194,16 @@ class SHTC3:
         # decode data into human values:
         # convert bytes into 16-bit signed integer
         # convert the LSB value to a human value according to the datasheet
-        raw_temp = unpack_from(">h", temp_data)
+        raw_temp = unpack_from(">h", temp_data)[0]
         raw_temp = ((4375 * raw_temp) >> 14) - 4500
         temperature = raw_temp / 100.0
 
         # repeat above steps for humidity data
-        raw_humidity = unpack_from(">h", humidity_data)
+        raw_humidity = unpack_from(">h", humidity_data)[0]
         raw_humidity = (625 * raw_humidity) >> 12
         humidity = raw_humidity / 100.0
 
-        self.sleep = True
+        self.sleeping = True
         return (temperature, humidity)
 
     ## CRC-8 formula from page 14 of SHTC3 datasheet
@@ -211,7 +212,6 @@ class SHTC3:
 
     @staticmethod
     def _crc8(buffer):
-        print("\t\tbuff", [hex(i) for i in buffer])
         crc = 0xFF
         for byte in buffer:
             crc ^= byte
@@ -220,5 +220,4 @@ class SHTC3:
                     crc = (crc << 1) ^ 0x31
                 else:
                     crc = crc << 1
-        print("\t\tcrc:", hex(crc & 0xFF))
         return crc & 0xFF  # return the bottom 8 bits

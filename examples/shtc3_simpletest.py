@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+# SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
+#
+# SPDX-License-Identifier: MIT
 import time
 import busio
 import board

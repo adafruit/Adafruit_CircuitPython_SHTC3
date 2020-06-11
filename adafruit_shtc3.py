@@ -63,6 +63,8 @@ _SHTC3_SOFTRESET = 0x805D # Soft Reset
 _SHTC3_SLEEP = 0xB098     # Enter sleep mode
 _SHTC3_WAKEUP = 0x3517    # Wakeup mode
 _SHTC3_CHIP_ID = 0x807
+def pb(buffer):
+  print("buf:", [hex(i) for i in buffer])
 
 class SHTC3:
   def __init__(self, i2c_bus, address = _SHTC3_DEFAULT_ADDR):
@@ -80,7 +82,7 @@ class SHTC3:
     self._buffer[1] = command & 0xFF
 
     with self.i2c_device as i2c:
-      i2c.write(self._buffer, start=0, end=0)
+      i2c.write(self._buffer, start=0, end=2)
 
   @property
   def _chip_id(self): #   readCommand(SHTC3_READID, data, 3);
@@ -88,12 +90,17 @@ class SHTC3:
     self._buffer[1] = _SHTC3_READID & 0xFF
 
     with self.i2c_device as i2c:
-        i2c.write_then_readinto(self._buffer, self._buffer, out_start=0, out_end=2, in_start=0)
+        i2c.write_then_readinto(self._buffer, self._buffer, out_start=0, out_end=2, in_start=0, in_end=2)
 
     return unpack_from(">H", self._buffer)[0]
 
   def reset(self):
-    self._write_command(_SHTC3_SOFTRESET)
+    try:
+      self._write_command(_SHTC3_SOFTRESET)
+
+    except RuntimeError as run_err:
+      if run_err.args and run_err.args[0] != "I2C slave address was NACK'd":
+        raise run_err
     delay_seconds(0.001)
 
   @property
@@ -108,69 +115,56 @@ class SHTC3:
       else:
         self._write_command(_SHTC3_WAKEUP)
       delay_seconds(0.001)
+      self._cached_sleep = sleep_enabled
 
 # lowPowerMode(bool readmode) { _lpMode = readmode
 
   @property
-  def humidity(self):
+  def relative_humidity(self):
     """Current relative humidity in % rH"""
-  # sensors_event_t *humidity,
-  #                               sensors_event_t *temp) {
-    t = monotonic()
-    print("reading hum/temp")
-    readbuffer = bytearray(6)
+    self.measurements[1]
+    return self._humidity
+
+  @property
+  def temperature(self):
+    """Current temperature in degrees celcius"""
+    self.measurements[0]
+
+  @property
+  def measurements(self):
+    """both `temperature` and `relative_humidity`, read simultaneously"""
 
     self.sleep = False
-    read_bytes = []
+    raw_readings = []
 
-    # self._write_command(_SHTC3_LOWPOW_MEAS_TFIRST)
-    if False: #lowPower
+    if False: # check for lowPower
       self._write_command(_SHTC3_LOWPOW_MEAS_TFIRST)
       delay_seconds(0.001)
     else:
       self._write_command(_SHTC3_NORMAL_MEAS_TFIRST)
       delay_seconds(0.013)
 
-  #   while (!i2c_dev->read(readbuffer, sizeof(readbuffer))) {
-  #     delay(1)
-    while True:
-      with self.i2c_device as i2c:
-          print("reading")
-          i2c.readinto(self._buffer)
-      print("buf:", [hex(i) for i in self._buffer])
-      read_bytes = unpack_from(">hbh", self._buffer)
-      print("unpacked:", read_bytes)
-      if read_bytes[0] != 0 and read_bytes[1] != 0 and read_bytes[2] != 0:
-        print ("not all zeros, breaking")
-        break
-      print ("all zeros, continuing")
+    self._buffer = bytearray(6)
+    with self.i2c_device as i2c:
+        i2c.readinto(self._buffer)
+    raw_readings = unpack_from(">hbh", self._buffer)
 
+
+    # check CRC of bytes
     # if (self._buffer[2] != crc8(self._buffer, 2) or
     #     self._buffer[5] != crc8(self._buffer + 3, 2)):
     #   print("NOT CHECKING")
 
-    stemp = read_bytes[0]
-    stemp = ((4375 * stemp) >> 14) - 4500
-    temperature = stemp / 100.0
-    print("temp:", temperature, "stemp:", stemp)
+    raw_temp = raw_readings[0]
+    raw_temp = ((4375 * raw_temp) >> 14) - 4500
+    temperature = raw_temp / 100.0
 
-    shum = read_bytes[2]
-    shum = (625 * shum) >> 12
-    humidity = shum / 100.0
+    raw_humidity = raw_readings[2]
+    raw_humidity = (625 * raw_humidity) >> 12
+    humidity = raw_humidity / 100.0
 
     self.sleep = True
-
-    print("shum:", shum, "humidity:", humidity)
     return (temperature, humidity)
-  #   delay_seconds(true)
-
-  #   // use helpers to fill in the events
-  #   if (temp)
-  #     fillTempEvent(temp, t)
-  #   if (humidity)
-  #     fillHumidityEvent(humidity, t)
-  #   return true
-#
 
 
 
@@ -203,7 +197,7 @@ class SHTC3:
 
 #     for (int i = 8 i --i) {
 #       crc = (crc & 0x80) ? (crc << 1) ^ POLYNOMIAL : (crc << 1)
-#    
-#  
+#
+#
 #   return crc
 #

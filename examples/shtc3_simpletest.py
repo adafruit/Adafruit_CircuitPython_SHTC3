@@ -3,9 +3,12 @@ import time
 import busio
 import board
 import adafruit_shtc3
-from adafruit_debug_i2c import DebugI2C
 i2c = busio.I2C(board.SCL, board.SDA)
-i2c = DebugI2C(i2c)
 sht = adafruit_shtc3.SHTC3(i2c)
-print("got out")
-print("hum:", sht.humidity)
+
+while True:
+    temperature, relative_humidity = sht.measurements
+    print("Temperature: %0.1f C" % temperature)
+    print("Humidity: %0.1f %%" % relative_humidity)
+    print("")
+    time.sleep(1)

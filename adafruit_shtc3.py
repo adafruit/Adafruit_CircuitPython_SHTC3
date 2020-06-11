@@ -75,8 +75,6 @@ _SHTC3_SOFTRESET = 0x805D  # Soft Reset
 _SHTC3_SLEEP = 0xB098  # Enter sleep mode
 _SHTC3_WAKEUP = 0x3517  # Wakeup mode
 _SHTC3_CHIP_ID = 0x807
-#   const uint8_t POLYNOMIAL(0x31)
-_POLYNOMIAL = 0x31
 
 
 class SHTC3:
@@ -165,8 +163,9 @@ class SHTC3:
         """both `temperature` and `relative_humidity`, read simultaneously"""
 
         self.sleep = False
-        raw_readings = []
-
+        temperature = None
+        humidity = None
+        # send correct command for the current power state
         if self.low_power:
             self._write_command(_SHTC3_LOWPOW_MEAS_TFIRST)
             time.sleep(0.001)
@@ -174,59 +173,52 @@ class SHTC3:
             self._write_command(_SHTC3_NORMAL_MEAS_TFIRST)
             time.sleep(0.013)
 
-        self._buffer = bytearray(6)
+        # self._buffer = bytearray(6)
+        # read the measured data into our buffer
         with self.i2c_device as i2c:
             i2c.readinto(self._buffer)
-        raw_readings = unpack_from(">hbh", self._buffer)
 
-        # print("CRC8-ing some beef:", hex(self._crc8(bytearray([0xBE, 0xEF]), 2)))
+        # separate the read data
+        temp_data = self._buffer[0:2]
+        temp_crc = self._buffer[2]
+        humidity_data = self._buffer[3:5]
+        humidity_crc = self._buffer[5]
+
         # check CRC of bytes
-        # if (self._buffer[2] != crc8(self._buffer, 2) or
-        #     self._buffer[5] != crc8(self._buffer + 3, 2)):
-        #   print("NOT CHECKING")
+        if temp_crc != self._crc8(temp_data) or humidity_crc != self._crc8(
+            humidity_data
+        ):
+            return (temperature, humidity)
 
-        raw_temp = raw_readings[0]
+        # decode data into human values:
+        # convert bytes into 16-bit signed integer
+        # convert the LSB value to a human value according to the datasheet
+        raw_temp = unpack_from(">h", temp_data)
         raw_temp = ((4375 * raw_temp) >> 14) - 4500
         temperature = raw_temp / 100.0
 
-        raw_humidity = raw_readings[2]
+        # repeat above steps for humidity data
+        raw_humidity = unpack_from(">h", humidity_data)
         raw_humidity = (625 * raw_humidity) >> 12
         humidity = raw_humidity / 100.0
 
         self.sleep = True
         return (temperature, humidity)
 
-    ## CRC-8 formula from page 14 of SHT spec pdf
-    #
-    # Test data 0xBE, 0xEF should yield 0x92
-    #
-    # Initialization data 0xFF
-    # Polynomial 0x31 (x8 + x5 +x4 +1)
-    # Final XOR 0x00
+    ## CRC-8 formula from page 14 of SHTC3 datasheet
+    # https://media.digikey.com/pdf/Data%20Sheets/Sensirion%20PDFs/HT_DS_SHTC3_D1.pdf
+    # Test data [0xBE, 0xEF] should yield 0x92
 
-    # @staticmethod
-    # def _crc8(buffer, length):
-    #     print("buffer:", buffer)
-    #     crc = 0xFF
-    #     print("0: crc = ", format(crc, "#010b"))
-
-    #     buff_index = 0
-    #     for i in range(length):
-    #         curr_buff = buffer[i]
-    #         print("buffer[%d]" % i, hex(curr_buff), format(curr_buff, "#010b"))
-    #         crc ^= curr_buff
-    #         print("1 crc = ", format(crc, "#010b"))
-
-    #         for i in range(8):
-    #             print("crc & 0x80: ", format(crc & 0x80, "#010b"))
-    #             crc_shift_one = (crc << 1)
-    #             if crc & 0x80: # if crc top bit is set
-    #                 print("yes")
-    #                 crc = crc_shift_one ^ _POLYNOMIAL
-    #             else:
-    #                 print("no")
-    #                 crc = crc_shift_one
-    #                 print("3 crc = crc << 1", format(crc, "#010b"))
-    #             print("\t*** NEXT BIT **")
-    #         print("*** NEXT BYTE **")
-    #     return crc
+    @staticmethod
+    def _crc8(buffer):
+        print("\t\tbuff", [hex(i) for i in buffer])
+        crc = 0xFF
+        for byte in buffer:
+            crc ^= byte
+            for _ in range(8):
+                if crc & 0x80:
+                    crc = (crc << 1) ^ 0x31
+                else:
+                    crc = crc << 1
+        print("\t\tcrc:", hex(crc & 0xFF))
+        return crc & 0xFF  # return the bottom 8 bits

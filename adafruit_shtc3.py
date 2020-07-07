@@ -199,7 +199,7 @@ class SHTC3:
         temperature = raw_temp / 100.0
 
         # repeat above steps for humidity data
-        raw_humidity = unpack_from(">h", humidity_data)[0]
+        raw_humidity = unpack_from(">H", humidity_data)[0]
         raw_humidity = (625 * raw_humidity) >> 12
         humidity = raw_humidity / 100.0
 

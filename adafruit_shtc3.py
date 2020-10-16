@@ -90,8 +90,8 @@ class SHTC3:
 
         self._buffer = bytearray(6)
         self.low_power = False
-        self.reset()
         self.sleeping = False
+        self.reset()
         if self._chip_id & 0x083F != _SHTC3_CHIP_ID:
             raise RuntimeError("Failed to find an ICM20X sensor - check your wiring!")
 
@@ -116,6 +116,7 @@ class SHTC3:
 
     def reset(self):
         """Perform a soft reset of the sensor, resetting all settings to their power-on defaults"""
+        self.sleeping = False
         try:
             self._write_command(_SHTC3_SOFTRESET)
 

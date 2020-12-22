@@ -195,7 +195,7 @@ class SHTC3:
         # decode data into human values:
         # convert bytes into 16-bit signed integer
         # convert the LSB value to a human value according to the datasheet
-        raw_temp = unpack_from(">h", temp_data)[0]
+        raw_temp = unpack_from(">H", temp_data)[0]
         raw_temp = ((4375 * raw_temp) >> 14) - 4500
         temperature = raw_temp / 100.0
 

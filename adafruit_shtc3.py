@@ -6,7 +6,7 @@
 `adafruit_shtc3`
 ================================================================================
 
-A helper library for using the Senserion SHTC3 Humidity and Temperature Sensor
+A helper library for using the Sensirion SHTC3 Humidity and Temperature Sensor
 
 
 * Author(s): Bryan Siepert
@@ -16,7 +16,7 @@ Implementation Notes
 
 **Hardware:**
 
-* Adafruit's ICM20649 Breakout: https://www.adafruit.com/product/4636
+* Adafruit's SHTC3 Temperature & Humidity Sensor: https://www.adafruit.com/product/4636
 
 **Software and Dependencies:**
 
@@ -83,6 +83,32 @@ class SHTC3:
 
     :param ~busio.I2C i2c_bus: The `busio.I2C` object to use. This is the only required parameter.
 
+    **Quickstart: Importing and using the SHTC3 temperature and humidity sensor**
+
+        Here is one way of importing the `SHTC3` class so you can use it with the name ``sht``.
+        First you will need to import the helper libraries to use the sensor
+
+        .. code-block:: python
+
+            import busio
+            import board
+            import adafruit_shtc3
+
+        Once this is done, you can define your `busio.I2C` object and define your sensor
+
+        .. code-block:: python
+
+            i2c = busio.I2C(board.SCL, board.SDA)
+            sht = adafruit_shtc3.SHTC3(i2c)
+
+        Now you have access to the temperature and humidity using the :attr:`measurements`.
+        it will return a tuple with the :attr:`temperature` and :attr:`relative_humidity`
+        measurements
+
+        .. code-block:: python
+
+            temperature, relative_humidity = sht.measurements
+
     """
 
     def __init__(self, i2c_bus):
@@ -93,9 +119,10 @@ class SHTC3:
         self.sleeping = False
         self.reset()
         if self._chip_id & 0x083F != _SHTC3_CHIP_ID:
-            raise RuntimeError("Failed to find an ICM20X sensor - check your wiring!")
+            raise RuntimeError("Failed to find an SHTC3 sensor - check your wiring!")
 
     def _write_command(self, command):
+        """helper function to write a command to the i2c device"""
         self._buffer[0] = command >> 8
         self._buffer[1] = command & 0xFF
 
@@ -104,6 +131,7 @@ class SHTC3:
 
     @property
     def _chip_id(self):  #   readCommand(SHTC3_READID, data, 3);
+        """Determines the chip id of the sensor"""
         self._buffer[0] = _SHTC3_READID >> 8
         self._buffer[1] = _SHTC3_READID & 0xFF
 
@@ -152,12 +180,12 @@ class SHTC3:
 
     @property
     def relative_humidity(self):
-        """The current relative humidity in % rH"""
+        """The current relative humidity in % rH. This is a value from 0-100%."""
         return self.measurements[1]
 
     @property
     def temperature(self):
-        """The current temperature in degrees celcius"""
+        """The current temperature in degrees Celsius"""
         return self.measurements[0]
 
     @property
@@ -213,6 +241,7 @@ class SHTC3:
 
     @staticmethod
     def _crc8(buffer):
+        """verify the crc8 checksum"""
         crc = 0xFF
         for byte in buffer:
             crc ^= byte

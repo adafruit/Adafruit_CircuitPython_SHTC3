@@ -107,6 +107,8 @@ class SHTC3:
         self._buffer[0] = _SHTC3_READID >> 8
         self._buffer[1] = _SHTC3_READID & 0xFF
 
+        self.reset()
+
         with self.i2c_device as i2c:
             i2c.write_then_readinto(
                 self._buffer, self._buffer, out_start=0, out_end=2, in_start=0, in_end=2

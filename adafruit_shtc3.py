@@ -119,7 +119,7 @@ class SHTC3:
         self.sleeping = False
         self.reset()
         self._chip_id = self._get_chip_id()
-        if self._chip_id & 0x083F != _SHTC3_CHIP_ID:
+        if self._chip_id != _SHTC3_CHIP_ID:
             raise RuntimeError("Failed to find an SHTC3 sensor - check your wiring!")
 
     def _write_command(self, command):
@@ -137,7 +137,7 @@ class SHTC3:
         with self.i2c_device as i2c:
             i2c.readinto(self._buffer)
 
-        return unpack_from(">H", self._buffer)[0]
+        return unpack_from(">H", self._buffer)[0] & 0x083F
 
     def reset(self):
         """Perform a soft reset of the sensor, resetting all settings to their power-on defaults"""

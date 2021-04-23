@@ -23,11 +23,12 @@ Table of Contents
 .. toctree::
     :caption: Tutorials
 
-
+    Adafruit Sensirion SHTC3 Temperature & Humidity Sensor Learning Guide <https://learn.adafruit.com/adafruit-sensirion-shtc3-temperature-humidity-sensor>
 
 .. toctree::
     :caption: Related Products
 
+    Adafruit Sensirion SHTC3 Temperature & Humidity Sensor <https://www.adafruit.com/product/4636>
 
 .. toctree::
     :caption: Other Links

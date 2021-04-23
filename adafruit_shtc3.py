@@ -81,24 +81,23 @@ class SHTC3:
     """
     A driver for the SHTC3 temperature and humidity sensor.
 
-    :param ~busio.I2C i2c_bus: The `busio.I2C` object to use. This is the only required parameter.
+    :param ~busio.I2C i2c_bus: The I2C bus the SHTC3 is connected to.
 
     **Quickstart: Importing and using the SHTC3 temperature and humidity sensor**
 
-        Here is one way of importing the `SHTC3` class so you can use it with the name ``sht``.
-        First you will need to import the helper libraries to use the sensor
+        Here is an example of using the :class:`SHTC3`.
+        First you will need to import the libraries to use the sensor
 
         .. code-block:: python
 
-            import busio
             import board
             import adafruit_shtc3
 
-        Once this is done, you can define your `busio.I2C` object and define your sensor
+        Once this is done, you can define your `board.I2C` object and define your sensor
 
         .. code-block:: python
 
-            i2c = busio.I2C(board.SCL, board.SDA)
+            i2c = board.I2C()   # uses board.SCL and board.SDA
             sht = adafruit_shtc3.SHTC3(i2c)
 
         Now you have access to the temperature and humidity using the :attr:`measurements`.
@@ -146,7 +145,7 @@ class SHTC3:
             self._write_command(_SHTC3_SOFTRESET)
 
         except RuntimeError as run_err:
-            if run_err.args and run_err.args[0] != "I2C slave address was NACK'd":
+            if run_err.args and run_err.args[0] != "I2C device address was NACK'd":
                 raise run_err
         time.sleep(0.001)
 

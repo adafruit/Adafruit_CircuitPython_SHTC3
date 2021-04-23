@@ -2,11 +2,10 @@
 #
 # SPDX-License-Identifier: MIT
 import time
-import busio
 import board
 import adafruit_shtc3
 
-i2c = busio.I2C(board.SCL, board.SDA)
+i2c = board.I2C()
 sht = adafruit_shtc3.SHTC3(i2c)
 
 while True:

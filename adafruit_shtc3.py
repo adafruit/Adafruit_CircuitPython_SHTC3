@@ -17,7 +17,7 @@ Implementation Notes
 **Hardware:**
 
 * `Adafruit SHTC3 Temperature & Humidity Sensor
-  https://www.adafruit.com/product/4636`_ (Product ID: 4636)
+  <https://www.adafruit.com/product/4636>`_ (Product ID: 4636)
 
 **Software and Dependencies:**
 

@@ -16,17 +16,20 @@ Implementation Notes
 
 **Hardware:**
 
-* Adafruit's SHTC3 Temperature & Humidity Sensor: https://www.adafruit.com/product/4636
+* `Adafruit SHTC3 Temperature & Humidity Sensor
+  <https://www.adafruit.com/product/4636>`_ (Product ID: 4636)
 
 **Software and Dependencies:**
 
 * Adafruit CircuitPython firmware for the supported boards:
   https://circuitpython.org/downloads
 
+* Adafruit's Bus Device library:
+  https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
 
+* Adafruit's Register library:
+  https://github.com/adafruit/Adafruit_CircuitPython_Register
 
-* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
 """
 
 # imports

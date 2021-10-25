@@ -77,6 +77,11 @@ Usage Example
         time.sleep(1)
 
 
+Documentation
+=============
+
+API documentation for this library can be found on `Read the Docs <https://circuitpython.readthedocs.io/projects/shtc3/en/latest/>`_.
+
 Contributing
 ============
 

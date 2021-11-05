@@ -39,7 +39,7 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_SHTC3.git"
 
 from struct import unpack_from
 import time
-import adafruit_bus_device.i2c_device as i2c_device
+from adafruit_bus_device import i2c_device
 
 
 # include "Arduino.h"

@@ -118,7 +118,7 @@ class SHTC3:
 
     """
 
-    def __init__(self, i2c_bus: I2C):
+    def __init__(self, i2c_bus: I2C) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, _SHTC3_DEFAULT_ADDR)
 
         self._buffer = bytearray(6)

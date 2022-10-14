@@ -41,6 +41,11 @@ from struct import unpack_from
 import time
 from adafruit_bus_device import i2c_device
 
+try:
+    from typing import Tuple
+    from busio import I2C
+except ImportError:
+    pass
 
 # include "Arduino.h"
 # include <Adafruit_I2CDevice.h>
@@ -113,7 +118,7 @@ class SHTC3:
 
     """
 
-    def __init__(self, i2c_bus):
+    def __init__(self, i2c_bus: I2C) -> None:
         self.i2c_device = i2c_device.I2CDevice(i2c_bus, _SHTC3_DEFAULT_ADDR)
 
         self._buffer = bytearray(6)
@@ -124,7 +129,7 @@ class SHTC3:
         if self._chip_id != _SHTC3_CHIP_ID:
             raise RuntimeError("Failed to find an SHTC3 sensor - check your wiring!")
 
-    def _write_command(self, command):
+    def _write_command(self, command: int) -> None:
         """helper function to write a command to the i2c device"""
         self._buffer[0] = command >> 8
         self._buffer[1] = command & 0xFF
@@ -132,7 +137,7 @@ class SHTC3:
         with self.i2c_device as i2c:
             i2c.write(self._buffer, start=0, end=2)
 
-    def _get_chip_id(self):  #   readCommand(SHTC3_READID, data, 3);
+    def _get_chip_id(self) -> int:  #   readCommand(SHTC3_READID, data, 3);
         """Determines the chip id of the sensor"""
         self._write_command(_SHTC3_READID)
         time.sleep(0.001)
@@ -141,7 +146,7 @@ class SHTC3:
 
         return unpack_from(">H", self._buffer)[0] & 0x083F
 
-    def reset(self):
+    def reset(self) -> None:
         """Perform a soft reset of the sensor, resetting all settings to their power-on defaults"""
         self.sleeping = False
         try:
@@ -153,12 +158,12 @@ class SHTC3:
         time.sleep(0.001)
 
     @property
-    def sleeping(self):
+    def sleeping(self) -> bool:
         """Determines the sleep state of the sensor"""
         return self._cached_sleep
 
     @sleeping.setter
-    def sleeping(self, sleep_enabled):
+    def sleeping(self, sleep_enabled: bool) -> None:
         if sleep_enabled:
             self._write_command(_SHTC3_SLEEP)
         else:
@@ -169,26 +174,26 @@ class SHTC3:
     # lowPowerMode(bool readmode) { _lpMode = readmode
 
     @property
-    def low_power(self):
+    def low_power(self) -> bool:
         """Enables the less accurate low power mode, trading accuracy for power consumption"""
         return self._low_power
 
     @low_power.setter
-    def low_power(self, low_power_enabled):
+    def low_power(self, low_power_enabled: bool) -> None:
         self._low_power = low_power_enabled
 
     @property
-    def relative_humidity(self):
+    def relative_humidity(self) -> float:
         """The current relative humidity in % rH. This is a value from 0-100%."""
         return self.measurements[1]
 
     @property
-    def temperature(self):
+    def temperature(self) -> float:
         """The current temperature in degrees Celsius"""
         return self.measurements[0]
 
     @property
-    def measurements(self):
+    def measurements(self) -> Tuple[float, float]:
         """both `temperature` and `relative_humidity`, read simultaneously"""
 
         self.sleeping = False
@@ -239,7 +244,7 @@ class SHTC3:
     # Test data [0xBE, 0xEF] should yield 0x92
 
     @staticmethod
-    def _crc8(buffer):
+    def _crc8(buffer: bytearray) -> int:
         """verify the crc8 checksum"""
         crc = 0xFF
         for byte in buffer:

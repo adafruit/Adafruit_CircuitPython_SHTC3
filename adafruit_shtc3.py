@@ -123,6 +123,7 @@ class SHTC3:
 
         self._buffer = bytearray(6)
         self.low_power = False
+        self._cached_sleep = False
         self.sleeping = False
         self.reset()
         self._chip_id = self._get_chip_id()

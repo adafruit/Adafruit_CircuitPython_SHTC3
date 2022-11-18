@@ -6,6 +6,7 @@ import board
 import adafruit_shtc3
 
 i2c = board.I2C()  # uses board.SCL and board.SDA
+# i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
 sht = adafruit_shtc3.SHTC3(i2c)
 
 while True:

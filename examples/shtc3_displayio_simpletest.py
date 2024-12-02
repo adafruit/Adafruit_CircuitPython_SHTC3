@@ -35,6 +35,8 @@ board.DISPLAY.root_group = main_group
 while True:
     temperature, relative_humidity = sht.measurements
     # Update the label.text property to change the text on the display
-    display_output_label.text = f"Temperature: {temperature:.1f} C Humidity: {relative_humidity:.1f} %"
+    display_output_label.text = (
+        f"Temperature: {temperature:.1f} C Humidity: {relative_humidity:.1f} %"
+    )
     # wait for a bit
     time.sleep(1)

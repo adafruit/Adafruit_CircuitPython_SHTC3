@@ -7,7 +7,7 @@ Ensure your device works with this simple test.
     :caption: examples/shtc3_simpletest.py
     :linenos:
 
-DisplyIO Simple test
+DisplayIO Simple test
 ---------------------
 
 This is a simple test for boards with built-in display.

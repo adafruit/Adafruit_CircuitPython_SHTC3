@@ -3,12 +3,13 @@
 #
 # SPDX-License-Identifier: MIT
 import time
+
 import board
 from adafruit_display_text.bitmap_label import Label
-from terminalio import FONT
 from displayio import Group
-import adafruit_shtc3
+from terminalio import FONT
 
+import adafruit_shtc3
 
 # create a main_group to hold anything we want to show on the display.
 main_group = Group()

@@ -37,12 +37,14 @@ Implementation Notes
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_SHTC3.git"
 
-from struct import unpack_from
 import time
+from struct import unpack_from
+
 from adafruit_bus_device import i2c_device
 
 try:
     from typing import Tuple
+
     from busio import I2C
 except ImportError:
     pass
@@ -65,18 +67,10 @@ _SHTC3_LOWPOW_MEAS_HFIRST_STRETCH = (
     0x44DE  # Low power measurement, hum first with Clock Stretch Enabled
 )
 
-_SHTC3_NORMAL_MEAS_TFIRST = (
-    0x7866  # Normal measurement, temp first with Clock Stretch disabled
-)
-_SHTC3_LOWPOW_MEAS_TFIRST = (
-    0x609C  # Low power measurement, temp first with Clock Stretch disabled
-)
-_SHTC3_NORMAL_MEAS_HFIRST = (
-    0x58E0  # Normal measurement, hum first with Clock Stretch disabled
-)
-_SHTC3_LOWPOW_MEAS_HFIRST = (
-    0x401A  # Low power measurement, hum first with Clock Stretch disabled
-)
+_SHTC3_NORMAL_MEAS_TFIRST = 0x7866  # Normal measurement, temp first with Clock Stretch disabled
+_SHTC3_LOWPOW_MEAS_TFIRST = 0x609C  # Low power measurement, temp first with Clock Stretch disabled
+_SHTC3_NORMAL_MEAS_HFIRST = 0x58E0  # Normal measurement, hum first with Clock Stretch disabled
+_SHTC3_LOWPOW_MEAS_HFIRST = 0x401A  # Low power measurement, hum first with Clock Stretch disabled
 
 _SHTC3_READID = 0xEFC8  # Read Out of ID Register
 _SHTC3_SOFTRESET = 0x805D  # Soft Reset
@@ -219,9 +213,7 @@ class SHTC3:
         humidity_crc = self._buffer[5]
 
         # check CRC of bytes
-        if temp_crc != self._crc8(temp_data) or humidity_crc != self._crc8(
-            humidity_data
-        ):
+        if temp_crc != self._crc8(temp_data) or humidity_crc != self._crc8(humidity_data):
             return (temperature, humidity)
 
         # decode data into human values:
